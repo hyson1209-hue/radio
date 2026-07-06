@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MBC충북 라디오</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Malgun Gothic", sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .player {
+      width: 100%;
+      max-width: 400px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 24px; }
+    .channels { display: flex; gap: 12px; margin-bottom: 32px; }
+    .channel {
+      flex: 1;
+      padding: 16px 8px;
+      border: 2px solid #374151;
+      border-radius: 12px;
+      background: transparent;
+      color: #9ca3af;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .channel.active {
+      border-color: #38bdf8;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+    .channel small { display: block; margin-top: 4px; font-size: 0.75rem; }
+    #play {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: none;
+      background: #38bdf8;
+      color: #111827;
+      font-size: 2rem;
+      cursor: pointer;
+      margin-bottom: 24px;
+    }
+    #play:active { transform: scale(0.95); }
+    #status { color: #9ca3af; font-size: 0.9rem; min-height: 1.2em; margin-bottom: 24px; }
+    .volume { display: flex; align-items: center; gap: 12px; }
+    .volume input { flex: 1; accent-color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <div class="player">
+    <h1>MBC충북 라디오</h1>
+    <div class="channels">
+      <button class="channel" data-channel="fm1">FM1<small>표준FM 96.3</small></button>
+      <button class="channel active" data-channel="fm2">FM2<small>FM4U 99.7</small></button>
+    </div>
+    <button id="play" aria-label="재생">&#9654;</button>
+    <p id="status">채널을 선택하고 재생을 누르세요</p>
+    <div class="volume">
+      <span aria-hidden="true">&#128266;</span>
+      <input id="volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="볼륨">
+    </div>
+    <audio id="audio"></audio>
+  </div>
+
+  <script>
+    const STREAMS = {
+      fm1: { name: 'MBC충북 표준FM', url: 'https://mbccbp.coreit.co.kr/radio_stfm/myStream.sdp/playlist.m3u8' },
+      fm2: { name: 'MBC충북 FM4U', url: 'https://mbccbp.coreit.co.kr/radio_fm/myStream.sdp/playlist.m3u8' }
+    };
+
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('play');
+    const status = document.getElementById('status');
+    let currentChannel = 'fm2';
+    let hls = null;
+    let playing = false;
+
+    function loadStream(channel) {
+      const stream = STREAMS[channel];
+      if (hls) { hls.destroy(); hls = null; }
+      if (window.Hls && Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(stream.url);
+        hls.attachMedia(audio);
+      } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+        audio.src = stream.url;
+      } else {
+        status.textContent = '이 브라우저에서는 재생할 수 없습니다';
+        return false;
+      }
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: stream.name, artist: 'MBC충북 라디오'
+        });
+      }
+      return true;
+    }
+
+    function play() {
+      if (!loadStream(currentChannel)) return;
+      status.textContent = '연결 중...';
+      audio.play().then(() => {
+        playing = true;
+        playBtn.innerHTML = '&#10074;&#10074;';
+        playBtn.setAttribute('aria-label', '정지');
+        status.textContent = STREAMS[currentChannel].name + ' 재생 중';
+      }).catch(() => {
+        status.textContent = '재생에 실패했습니다. 다시 시도해 주세요';
+      });
+    }
+
+    function stop() {
+      audio.pause();
+      if (hls) { hls.destroy(); hls = null; }
+      audio.removeAttribute('src');
+      playing = false;
+      playBtn.innerHTML = '&#9654;';
+      playBtn.setAttribute('aria-label', '재생');
+      status.textContent = '정지됨';
+    }
+
+    playBtn.addEventListener('click', () => playing ? stop() : play());
+
+    document.querySelectorAll('.channel').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelector('.channel.active').classList.remove('active');
+        btn.classList.add('active');
+        currentChannel = btn.dataset.channel;
+        if (playing) play();
+      });
+    });
+
+    document.getElementById('volume').addEventListener('input', e => {
+      audio.volume = e.target.value;
+    });
+
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', play);
+      navigator.mediaSession.setActionHandler('pause', stop);
+    }
+  </script>
+</body>
+</html>
