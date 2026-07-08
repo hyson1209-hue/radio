@@ -7,18 +7,33 @@ test('페이지가 로드되고 채널 UI가 보인다', async ({ page }) => {
   await expect(page.getByRole('button', { name: /FM2/ })).toBeVisible();
 });
 
-test('방송 시간에는 아나운서 배경과 이름이 표시된다', async ({ page }) => {
-  // 12:30 KST (03:30 UTC) — FM2 박서영 아나운서 시간대
+test('방송 시간에는 프로그램 배경과 이름이 표시된다', async ({ page }) => {
+  // 수요일 12:30 KST (03:30 UTC) — FM2 정오의 희망곡 시간대
   await page.clock.setFixedTime(new Date('2026-07-08T03:30:00Z'));
   await page.goto('/');
-  await expect(page.locator('#onair-host')).toContainText('박서영 아나운서');
-  await expect(page.locator('#announcer-bg')).toHaveClass(/show/);
-  await expect(page.locator('#announcer-bg')).toHaveCSS('background-image', /park-seoyoung/);
+  await expect(page.locator('#onair-host')).toContainText('정오의 희망곡');
+  await expect(page.locator('#program-bg')).toHaveClass(/show/);
+  await expect(page.locator('#program-bg')).toHaveCSS('background-image', /jeongo-hope/);
 
   // FM1은 이 시간대 방송이 없으므로 배경이 사라진다
   await page.getByRole('button', { name: /FM1/ }).click();
   await expect(page.locator('#onair-host')).toHaveText('');
-  await expect(page.locator('#announcer-bg')).not.toHaveClass(/show/);
+  await expect(page.locator('#program-bg')).not.toHaveClass(/show/);
+});
+
+test('분 단위 편성이 정확히 적용된다 (시사ON 11:05 시작)', async ({ page }) => {
+  // 수요일 11:03 KST — 시사ON 시작 전이므로 배경 없음
+  await page.clock.setFixedTime(new Date('2026-07-08T02:03:00Z'));
+  await page.goto('/');
+  await page.getByRole('button', { name: /FM1/ }).click();
+  await expect(page.locator('#onair-host')).toHaveText('');
+
+  // 수요일 11:10 KST — 시사ON 방송 중
+  await page.clock.setFixedTime(new Date('2026-07-08T02:10:00Z'));
+  await page.reload();
+  await page.getByRole('button', { name: /FM1/ }).click();
+  await expect(page.locator('#onair-host')).toContainText('시사ON');
+  await expect(page.locator('#program-bg')).toHaveCSS('background-image', /sisa-on/);
 });
 
 test('방송 시간이 아니면 배경이 표시되지 않는다', async ({ page }) => {
@@ -26,7 +41,29 @@ test('방송 시간이 아니면 배경이 표시되지 않는다', async ({ pag
   await page.clock.setFixedTime(new Date('2026-07-07T20:00:00Z'));
   await page.goto('/');
   await expect(page.locator('#onair-host')).toHaveText('');
-  await expect(page.locator('#announcer-bg')).not.toHaveClass(/show/);
+  await expect(page.locator('#program-bg')).not.toHaveClass(/show/);
+});
+
+test('주말에는 평일 프로그램 배경이 표시되지 않는다', async ({ page }) => {
+  // 토요일 12:30 KST (03:30 UTC)
+  await page.clock.setFixedTime(new Date('2026-07-11T03:30:00Z'));
+  await page.goto('/');
+  await expect(page.locator('#onair-host')).toHaveText('');
+  await expect(page.locator('#program-bg')).not.toHaveClass(/show/);
+});
+
+test('보이는 라디오를 켜고 끌 수 있다', async ({ page }) => {
+  await page.goto('/');
+  const frame = page.locator('#yt-frame');
+  await expect(frame).toBeHidden();
+
+  await page.getByRole('button', { name: '보이는 라디오' }).click();
+  await expect(frame).toBeVisible();
+  await expect(frame).toHaveAttribute('src', /youtube\.com\/embed/);
+
+  await page.getByRole('button', { name: '보이는 라디오 닫기' }).click();
+  await expect(frame).toBeHidden();
+  await expect(frame).toHaveAttribute('src', '');
 });
 
 test('재생 버튼을 누르면 라이브 스트림이 재생된다', async ({ page }) => {

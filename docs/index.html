@@ -7,8 +7,8 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    #announcer-bg {
-      position: fixed;
+    #program-bg {
+      position: absolute;
       top: 0;
       left: 0;
       right: 0;
@@ -19,9 +19,9 @@
       opacity: 0;
       transition: opacity 1.5s ease;
     }
-    #announcer-bg.show { opacity: 1; }
+    #program-bg.show { opacity: 1; }
     .player { transition: margin-top 1.5s ease; }
-    body.has-announcer .player { margin-top: 38vh; }
+    body.has-program .player { margin-top: 38vh; }
     #onair-host {
       color: #e5e7eb;
       font-size: 0.9rem;
@@ -77,10 +77,34 @@
     #status { color: #9ca3af; font-size: 0.9rem; min-height: 1.2em; margin-bottom: 24px; }
     .volume { display: flex; align-items: center; gap: 12px; }
     .volume input { flex: 1; accent-color: #38bdf8; }
+    #visible-radio-btn {
+      margin-top: 28px;
+      padding: 12px 20px;
+      border: 2px solid #374151;
+      border-radius: 12px;
+      background: transparent;
+      color: #9ca3af;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    #visible-radio-btn.active {
+      border-color: #f87171;
+      color: #f87171;
+    }
+    #visible-radio { margin-top: 20px; }
+    #yt-frame {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      border-radius: 12px;
+      background: #000;
+    }
+    .yt-note { color: #6b7280; font-size: 0.8rem; margin-top: 8px; }
+    .yt-note a { color: #38bdf8; }
   </style>
 </head>
 <body>
-  <div id="announcer-bg"></div>
+  <div id="program-bg"></div>
   <div class="player">
     <h1>MBC충북 라디오</h1>
     <p id="onair-host"></p>
@@ -94,6 +118,12 @@
       <span aria-hidden="true">&#128266;</span>
       <input id="volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="볼륨">
     </div>
+    <button id="visible-radio-btn">&#128250; 보이는 라디오</button>
+    <div id="visible-radio" hidden>
+      <iframe id="yt-frame" title="보이는 라디오" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      <p class="yt-note">방송 중이 아니면 재생되지 않을 수 있습니다.
+        <a href="https://www.youtube.com/channel/UCKvnHmqJvQQ9osEO1qRz9nA/live" target="_blank" rel="noopener">유튜브에서 열기</a></p>
+    </div>
     <audio id="audio"></audio>
   </div>
 
@@ -103,13 +133,14 @@
       fm2: { name: 'MBC충북 FM4U', url: 'https://mbccbp.coreit.co.kr/radio_fm/myStream.sdp/playlist.m3u8' }
     };
 
+    // 월~금 편성, start/end는 분 단위 (KST)
     const SCHEDULE = {
       fm1: [
-        { start: 11, end: 12, name: '이황주 아나운서', img: 'img/lee-hwangju.jpg' }
+        { start: 11 * 60 + 5, end: 11 * 60 + 57, name: '시사ON, 여기는 MBC충북입니다!', time: '월~금 11:05~11:57', img: 'img/sisa-on.jpg' }
       ],
       fm2: [
-        { start: 12, end: 13, name: '박서영 아나운서', img: 'img/park-seoyoung.jpg' },
-        { start: 16, end: 18, name: '최다원 아나운서', img: 'img/choi-dawon.jpg' }
+        { start: 12 * 60, end: 14 * 60, name: '정오의 희망곡', time: '월~금 12:00~14:00', img: 'img/jeongo-hope.jpg' },
+        { start: 16 * 60, end: 18 * 60, name: '완벽한 하루', time: '월~금 16:00~18:00', img: 'img/perfect-day.jpg' }
       ]
     };
 
@@ -142,6 +173,7 @@
     }
 
     function play() {
+      closeVisibleRadio();
       if (!loadStream(currentChannel)) return;
       status.textContent = '연결 중...';
       audio.play().then(() => {
@@ -171,7 +203,7 @@
         document.querySelector('.channel.active').classList.remove('active');
         btn.classList.add('active');
         currentChannel = btn.dataset.channel;
-        updateAnnouncer();
+        updateProgram();
         if (playing) play();
       });
     });
@@ -185,33 +217,66 @@
       navigator.mediaSession.setActionHandler('pause', stop);
     }
 
-    const announcerBg = document.getElementById('announcer-bg');
+    const programBg = document.getElementById('program-bg');
     const onairHost = document.getElementById('onair-host');
 
-    function kstHour() {
-      return parseInt(new Intl.DateTimeFormat('en-GB', {
-        hour: 'numeric', hour12: false, timeZone: 'Asia/Seoul'
-      }).format(new Date()), 10);
+    function kstNow() {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false, timeZone: 'Asia/Seoul'
+      }).formatToParts(new Date());
+      const get = type => parts.find(p => p.type === type).value;
+      const days = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      return {
+        day: days[get('weekday')],
+        minutes: (parseInt(get('hour'), 10) % 24) * 60 + parseInt(get('minute'), 10)
+      };
     }
 
-    function updateAnnouncer() {
-      const hour = kstHour();
-      const slot = SCHEDULE[currentChannel].find(s => hour >= s.start && hour < s.end);
+    function updateProgram() {
+      const now = kstNow();
+      const isWeekday = now.day >= 1 && now.day <= 5;
+      const slot = isWeekday &&
+        SCHEDULE[currentChannel].find(s => now.minutes >= s.start && now.minutes < s.end);
       if (slot) {
-        announcerBg.style.backgroundImage =
+        programBg.style.backgroundImage =
           'linear-gradient(to bottom, rgba(17,24,39,0.1) 0%, rgba(17,24,39,0.45) 55%, #111827 95%), url("' + slot.img + '")';
-        announcerBg.classList.add('show');
-        document.body.classList.add('has-announcer');
-        onairHost.innerHTML = '&#127908; ' + slot.name + ' 진행 중 (' + slot.start + ':00~' + slot.end + ':00)';
+        programBg.classList.add('show');
+        document.body.classList.add('has-program');
+        onairHost.innerHTML = '&#128251; ' + slot.name + ' (' + slot.time + ')';
       } else {
-        announcerBg.classList.remove('show');
-        document.body.classList.remove('has-announcer');
+        programBg.classList.remove('show');
+        document.body.classList.remove('has-program');
         onairHost.textContent = '';
       }
     }
 
-    updateAnnouncer();
-    setInterval(updateAnnouncer, 60 * 1000);
+    updateProgram();
+    setInterval(updateProgram, 60 * 1000);
+
+    const visibleBtn = document.getElementById('visible-radio-btn');
+    const visibleBox = document.getElementById('visible-radio');
+    const ytFrame = document.getElementById('yt-frame');
+    const YT_EMBED = 'https://www.youtube.com/embed/live_stream?channel=UCKvnHmqJvQQ9osEO1qRz9nA&autoplay=1';
+
+    function closeVisibleRadio() {
+      ytFrame.src = '';
+      visibleBox.hidden = true;
+      visibleBtn.classList.remove('active');
+      visibleBtn.innerHTML = '&#128250; 보이는 라디오';
+    }
+
+    visibleBtn.addEventListener('click', () => {
+      if (visibleBox.hidden) {
+        if (playing) stop();
+        ytFrame.src = YT_EMBED;
+        visibleBox.hidden = false;
+        visibleBtn.classList.add('active');
+        visibleBtn.innerHTML = '&#10005; 보이는 라디오 닫기';
+        visibleBox.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      } else {
+        closeVisibleRadio();
+      }
+    });
   </script>
 </body>
 </html>
