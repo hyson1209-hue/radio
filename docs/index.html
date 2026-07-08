@@ -108,6 +108,11 @@
     }
     .yt-note { color: #6b7280; font-size: 0.8rem; margin-top: 8px; }
     .yt-note a { color: #38bdf8; }
+    .freq { margin-top: 28px; color: #6b7280; font-size: 0.8rem; }
+    .freq summary { cursor: pointer; list-style-position: inside; }
+    .freq summary:hover { color: #9ca3af; }
+    .freq p { margin-top: 10px; line-height: 1.6; }
+    .freq strong { color: #9ca3af; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -116,8 +121,8 @@
     <h1>MBC충북 라디오</h1>
     <p id="onair-host"></p>
     <div class="channels">
-      <button class="channel" data-channel="fm1">FM1<small>표준FM 96.3</small></button>
-      <button class="channel active" data-channel="fm2">FM2<small>FM4U 99.7</small></button>
+      <button class="channel" data-channel="fm1">제1FM<small>표준FM 107.1MHz</small></button>
+      <button class="channel active" data-channel="fm2">제2FM<small>FM4U 99.7MHz</small></button>
     </div>
     <button id="play" aria-label="재생">&#9654;</button>
     <p id="status">채널을 선택하고 재생을 누르세요</p>
@@ -131,6 +136,11 @@
       <p class="yt-note">방송 중이 아니면 재생되지 않을 수 있습니다.
         <a href="https://www.youtube.com/channel/UCKvnHmqJvQQ9osEO1qRz9nA/live" target="_blank" rel="noopener">유튜브에서 열기</a></p>
     </div>
+    <details class="freq">
+      <summary>지역별 주파수 안내</summary>
+      <p><strong>제1FM</strong> 청주 107.1 &middot; 충주 96.1 &middot; 제천 94.7 &middot; 보은/옥천/영동 96.3 &middot; 단양 94.1<br>
+      <strong>제2FM</strong> 청주 99.7 &middot; 충주 88.7</p>
+    </details>
     <audio id="audio"></audio>
   </div>
 
