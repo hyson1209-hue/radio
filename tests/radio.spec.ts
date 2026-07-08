@@ -66,6 +66,21 @@ test('보이는 라디오를 켜고 끌 수 있다', async ({ page }) => {
   await expect(frame).toHaveAttribute('src', '');
 });
 
+test('PWA 매니페스트와 서비스 워커가 동작한다', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', 'manifest.json');
+
+  const manifest = await page.request.get('/manifest.json');
+  expect(manifest.ok()).toBeTruthy();
+  expect((await manifest.json()).display).toBe('standalone');
+
+  const swActive = await page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.ready;
+    return !!reg.active;
+  });
+  expect(swActive).toBe(true);
+});
+
 test('재생 버튼을 누르면 라이브 스트림이 재생된다', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '재생' }).click();
