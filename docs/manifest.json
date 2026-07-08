@@ -1,6 +1,6 @@
 {
   "name": "MBC충북 라디오",
-  "short_name": "MBC충북",
+  "short_name": "MBC충북 라디오",
   "description": "MBC충북 FM1/FM2 라디오 실시간 듣기",
   "start_url": "./",
   "scope": "./",
