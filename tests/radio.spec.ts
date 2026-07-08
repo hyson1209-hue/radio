@@ -36,6 +36,21 @@ test('분 단위 편성이 정확히 적용된다 (시사ON 11:05 시작)', asyn
   await expect(page.locator('#program-bg')).toHaveCSS('background-image', /sisa-on/);
 });
 
+test('제1FM 뉴스 시간에는 담당 아나운서가 표시된다', async ({ page }) => {
+  // 수요일 12:02 KST (03:02 UTC) — 제1FM 12시 뉴스, 제2FM 정오의 희망곡
+  await page.clock.setFixedTime(new Date('2026-07-08T03:02:00Z'));
+  await page.goto('/');
+  await page.getByRole('button', { name: /제1FM/ }).click();
+  await expect(page.locator('#onair-host')).toContainText('12시 뉴스');
+  await expect(page.locator('#onair-host')).toContainText('이황주 아나운서');
+
+  // 12:06에는 뉴스가 끝나 배경이 사라진다
+  await page.clock.setFixedTime(new Date('2026-07-08T03:06:00Z'));
+  await page.reload();
+  await page.getByRole('button', { name: /제1FM/ }).click();
+  await expect(page.locator('#onair-host')).toHaveText('');
+});
+
 test('방송 시간이 아니면 배경이 표시되지 않는다', async ({ page }) => {
   // 05:00 KST (전날 20:00 UTC) — 어떤 방송 시간대에도 해당 없음
   await page.clock.setFixedTime(new Date('2026-07-07T20:00:00Z'));
