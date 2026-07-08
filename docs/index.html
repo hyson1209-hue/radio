@@ -7,6 +7,28 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    #announcer-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 58vh;
+      z-index: -1;
+      background-size: cover;
+      background-position: center top;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+    #announcer-bg.show { opacity: 1; }
+    .player { transition: margin-top 1.5s ease; }
+    body.has-announcer .player { margin-top: 38vh; }
+    #onair-host {
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      margin: -12px 0 20px;
+      min-height: 1.2em;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    }
     body {
       font-family: -apple-system, "Malgun Gothic", sans-serif;
       background: #111827;
@@ -58,8 +80,10 @@
   </style>
 </head>
 <body>
+  <div id="announcer-bg"></div>
   <div class="player">
     <h1>MBC충북 라디오</h1>
+    <p id="onair-host"></p>
     <div class="channels">
       <button class="channel" data-channel="fm1">FM1<small>표준FM 96.3</small></button>
       <button class="channel active" data-channel="fm2">FM2<small>FM4U 99.7</small></button>
@@ -77,6 +101,16 @@
     const STREAMS = {
       fm1: { name: 'MBC충북 표준FM', url: 'https://mbccbp.coreit.co.kr/radio_stfm/myStream.sdp/playlist.m3u8' },
       fm2: { name: 'MBC충북 FM4U', url: 'https://mbccbp.coreit.co.kr/radio_fm/myStream.sdp/playlist.m3u8' }
+    };
+
+    const SCHEDULE = {
+      fm1: [
+        { start: 11, end: 12, name: '이황주 아나운서', img: 'img/lee-hwangju.jpg' }
+      ],
+      fm2: [
+        { start: 12, end: 13, name: '박서영 아나운서', img: 'img/park-seoyoung.jpg' },
+        { start: 16, end: 18, name: '최다원 아나운서', img: 'img/choi-dawon.jpg' }
+      ]
     };
 
     const audio = document.getElementById('audio');
@@ -137,6 +171,7 @@
         document.querySelector('.channel.active').classList.remove('active');
         btn.classList.add('active');
         currentChannel = btn.dataset.channel;
+        updateAnnouncer();
         if (playing) play();
       });
     });
@@ -149,6 +184,34 @@
       navigator.mediaSession.setActionHandler('play', play);
       navigator.mediaSession.setActionHandler('pause', stop);
     }
+
+    const announcerBg = document.getElementById('announcer-bg');
+    const onairHost = document.getElementById('onair-host');
+
+    function kstHour() {
+      return parseInt(new Intl.DateTimeFormat('en-GB', {
+        hour: 'numeric', hour12: false, timeZone: 'Asia/Seoul'
+      }).format(new Date()), 10);
+    }
+
+    function updateAnnouncer() {
+      const hour = kstHour();
+      const slot = SCHEDULE[currentChannel].find(s => hour >= s.start && hour < s.end);
+      if (slot) {
+        announcerBg.style.backgroundImage =
+          'linear-gradient(to bottom, rgba(17,24,39,0.1) 0%, rgba(17,24,39,0.45) 55%, #111827 95%), url("' + slot.img + '")';
+        announcerBg.classList.add('show');
+        document.body.classList.add('has-announcer');
+        onairHost.innerHTML = '&#127908; ' + slot.name + ' 진행 중 (' + slot.start + ':00~' + slot.end + ':00)';
+      } else {
+        announcerBg.classList.remove('show');
+        document.body.classList.remove('has-announcer');
+        onairHost.textContent = '';
+      }
+    }
+
+    updateAnnouncer();
+    setInterval(updateAnnouncer, 60 * 1000);
   </script>
 </body>
 </html>
