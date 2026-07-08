@@ -1,4 +1,4 @@
-const CACHE = 'mbccb-radio-v1';
+const CACHE = 'mbccb-radio-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -25,11 +25,12 @@ self.addEventListener('activate', e => {
 
 // 같은 도메인의 정적 파일만 캐시. 스트림/유튜브/CDN은 항상 네트워크로.
 // 네트워크 우선이라 배포 후 새로고침하면 최신 페이지를 받고, 오프라인일 때 캐시로 대체.
+// cache: 'no-cache' — GitHub Pages의 max-age=600 브라우저 캐시를 건너뛰고 서버에 재검증.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));

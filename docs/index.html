@@ -297,6 +297,13 @@
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
+      // 새 서비스 워커가 적용되면 한 번만 새로고침해서 최신 화면을 바로 반영
+      let refreshed = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshed) return;
+        refreshed = true;
+        location.reload();
+      });
     }
   </script>
 </body>
