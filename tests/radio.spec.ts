@@ -42,7 +42,7 @@ test('제1FM 뉴스 시간에는 담당 아나운서가 표시된다', async ({ 
   await page.goto('/');
   await page.getByRole('button', { name: /제1FM/ }).click();
   await expect(page.locator('#onair-host')).toContainText('12시 뉴스');
-  await expect(page.locator('#onair-host')).toContainText('이황주 아나운서');
+  await expect(page.locator('#onair-host')).toContainText('최다원 아나운서');
 
   // 12:06에는 뉴스가 끝나 배경이 사라진다
   await page.clock.setFixedTime(new Date('2026-07-08T03:06:00Z'));
