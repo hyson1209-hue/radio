@@ -66,6 +66,18 @@ test('보이는 라디오를 켜고 끌 수 있다', async ({ page }) => {
   await expect(frame).toHaveAttribute('src', '');
 });
 
+test('문자 참여 번호가 선택한 채널에 따라 바뀐다', async ({ page }) => {
+  await page.goto('/');
+  const sms = page.locator('#sms-btn');
+  // 기본 채널은 제2FM
+  await expect(sms).toHaveAttribute('href', 'sms:%230997');
+  await expect(sms).toContainText('#0997');
+
+  await page.getByRole('button', { name: /제1FM/ }).click();
+  await expect(sms).toHaveAttribute('href', 'sms:%231071');
+  await expect(sms).toContainText('#1071');
+});
+
 test('PWA 매니페스트와 서비스 워커가 동작한다', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', 'manifest.json');

@@ -84,7 +84,7 @@
     #status { color: #9ca3af; font-size: 0.9rem; min-height: 1.2em; margin-bottom: 24px; }
     .volume { display: flex; align-items: center; gap: 12px; }
     .volume input { flex: 1; accent-color: #38bdf8; }
-    #visible-radio-btn {
+    #visible-radio-btn, #sms-btn {
       margin-top: 28px;
       padding: 12px 20px;
       border: 2px solid #374151;
@@ -93,6 +93,11 @@
       color: #9ca3af;
       font-size: 0.95rem;
       cursor: pointer;
+    }
+    #sms-btn {
+      display: inline-block;
+      margin-top: 14px;
+      text-decoration: none;
     }
     #visible-radio-btn.active {
       border-color: #f87171;
@@ -113,6 +118,10 @@
     .freq summary:hover { color: #9ca3af; }
     .freq p { margin-top: 10px; line-height: 1.6; }
     .freq strong { color: #9ca3af; font-weight: 600; }
+    .qr-img { width: 160px; margin-top: 14px; border-radius: 8px; }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -136,10 +145,17 @@
       <p class="yt-note">방송 중이 아니면 재생되지 않을 수 있습니다.
         <a href="https://www.youtube.com/channel/UCKvnHmqJvQQ9osEO1qRz9nA/live" target="_blank" rel="noopener">유튜브에서 열기</a></p>
     </div>
+    <br>
+    <a id="sms-btn" href="sms:%230997">&#128172; 문자 참여 (#0997)</a>
     <details class="freq">
       <summary>지역별 주파수 안내</summary>
       <p><strong>제1FM</strong> 청주 107.1 &middot; 충주 96.1 &middot; 제천 94.7 &middot; 보은/옥천/영동 96.3 &middot; 단양 94.1<br>
       <strong>제2FM</strong> 청주 99.7 &middot; 충주 88.7</p>
+    </details>
+    <details class="freq">
+      <summary>QR 코드로 공유</summary>
+      <img src="qr.png" alt="MBC충북 라디오 접속 QR 코드" class="qr-img">
+      <p>카메라로 찍으면 바로 접속됩니다</p>
     </details>
     <audio id="audio"></audio>
   </div>
@@ -161,8 +177,11 @@
       ]
     };
 
+    const SMS = { fm1: '#1071', fm2: '#0997' };
+
     const audio = document.getElementById('audio');
     const playBtn = document.getElementById('play');
+    const smsBtn = document.getElementById('sms-btn');
     const status = document.getElementById('status');
     let currentChannel = 'fm2';
     let hls = null;
@@ -221,6 +240,7 @@
         btn.classList.add('active');
         currentChannel = btn.dataset.channel;
         updateProgram();
+        updateSms();
         if (playing) play();
       });
     });
@@ -267,7 +287,14 @@
       }
     }
 
+    function updateSms() {
+      const num = SMS[currentChannel];
+      smsBtn.href = 'sms:' + encodeURIComponent(num);
+      smsBtn.innerHTML = '&#128172; 문자 참여 (' + num + ')';
+    }
+
     updateProgram();
+    updateSms();
     setInterval(updateProgram, 60 * 1000);
 
     const visibleBtn = document.getElementById('visible-radio-btn');
